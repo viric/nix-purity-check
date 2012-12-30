@@ -67,6 +67,9 @@ func CheckHashes() {
 }
 
 func main() {
+	if len(os.Args) <= 1 {
+		fmt.Fprintln(os.Stderr, "Usage: diffhash [file1] [file2] ...")
+	}
 	for _, a := range os.Args[1:] {
 		load(a)
 	}
