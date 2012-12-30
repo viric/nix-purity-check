@@ -1,0 +1,4 @@
+Most paths will be armv6l-linux.
+
+Some have this stdenv-updates impurity in nixpkgs config:
+  stdenv.userHook = "test -f /niximpure/impure.sh && . /niximpure/impure.sh";
