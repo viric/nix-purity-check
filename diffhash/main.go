@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sort"
+	"strings"
 )
 
 type Data struct {
@@ -39,30 +42,49 @@ func load(name string) {
 	if e != nil {
 		log.Fatal("Couldn't open ", name, ": ", e)
 	}
+	defer f.Close()
+	fmt.Println("Loading ", name)
+
+	bf := bufio.NewReader(f)
 
 	for {
 		var d Data
 		d.File = name
 		var der string
-		n, e := fmt.Fscanln(f, d.StorePath, d.Hash, der)
-		if e != nil || n != 3 {
+
+		line, e := bf.ReadString('\n')
+		if e == io.EOF {
 			break
 		}
-		d.Prebuilt = (len(der) > 0)
+		line = line[:len(line)-1]
+		if len(line) > 1 && line[len(line)-1] == '\r' {
+			line = line[:len(line)-2]
+		}
+		line = strings.Replace(line, "|", " ", -1)
+		n, e := fmt.Sscanf(line, "%s %s %s", &d.StorePath, &d.Hash, &der)
+		if e == nil {
+			d.Prebuilt = true
+		} else if e == io.EOF && n == 2 {
+			d.Prebuilt = false
+		} else {
+			log.Fatal("Failed scanf. n=", n, ", err = ", e)
+		}
 		gdata = append(gdata, d)
 	}
 }
 
 func CheckHashes() {
-	for i := 0; i < len(gdata); i += 1 {
+	i := 0
+	for i < len(gdata) {
 		path := gdata[i].StorePath
 		hash := gdata[i].Hash
-		for j := i + 1; j < len(gdata) && gdata[j].StorePath != path; j += 1 {
+		j := i + 1
+		for ; j < len(gdata) && gdata[j].StorePath == path; j += 1 {
 			if gdata[j].Hash != hash {
-				fmt.Println("Discrepancy for ", path, " between ",
-					gdata[i].File, " and ", gdata[j].File)
+				fmt.Println(path, "between", gdata[i].File, "and", gdata[j].File)
 			}
 		}
+		i = j
 	}
 }
 
@@ -73,6 +95,7 @@ func main() {
 	for _, a := range os.Args[1:] {
 		load(a)
 	}
+	fmt.Println("Loaded: ", len(gdata))
 	gdata.Sort()
 	CheckHashes()
 }
